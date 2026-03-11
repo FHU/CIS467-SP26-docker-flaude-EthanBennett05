@@ -81,8 +81,18 @@ curl -I http://localhost:8080/
 
 ### 0.1 - Reflection Question
 > What headers does nginx send by default? Are any of them surprising?
+> I had to look up ETag and Content-length. I now know that Etag is used for cache validation, and content length displays how many bytes it takes to load a page.
 
----
+```
+Server: nginx/1.29.5
+Date: Wed, 11 Mar 2026 18:22:04 GMT
+Content-Type: text/html
+Content-Length: 19820
+Last-Modified: Mon, 09 Mar 2026 18:21:29 GMT
+Connection: keep-alive
+ETag: "69af0fa9-4d6c"
+Accept-Ranges: bytes
+```
 
 ## Checkpoint 1 — Compression
 
@@ -113,7 +123,7 @@ check the **Response Headers** panel.
 ### 1.1 Reflection Question
 > Why does `gzip_min_length` exist? What's the cost of compressing a 200-byte file?
 
----
+>If a file is too small the zip will actually add more bytes to it. A 200 byte small is so small that the gzip metadata could be more than the file itself
 
 ## Checkpoint 2 — Cache Control
 
