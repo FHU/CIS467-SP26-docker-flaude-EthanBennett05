@@ -127,15 +127,13 @@ Also verify in browser DevTools → Network tab → select a JS or CSS file →
 check the **Response Headers** panel.
 
 ### 1.1 Reflection Question
-
 > Why does `gzip_min_length` exist? What's the cost of compressing a 200-byte file?
 
-> If a file is too small the zip will actually add more bytes to it. A 200 byte small is so small that the gzip metadata could be more than the file itself
+>If a file is too small the zip will actually add more bytes to it. A 200 byte small is so small that the gzip metadata could be more than the file itself
 
 ## Checkpoint 2 — Cache Control
 
 ### Goal
-
 Apply appropriate caching strategies: aggressive caching for fingerprinted assets,
 no caching for HTML entry points.
 
